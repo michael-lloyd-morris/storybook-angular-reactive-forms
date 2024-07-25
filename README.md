@@ -12,3 +12,14 @@ So lets run some shell commands. In the directory you want to store your coding 
 ```bash
 $ ng new my-project
 ```
+
+Angular will ask which CSS pre-parser to use and whether to support Server Side Rendering. To keep the tutorial simple `CSS` was chosen and Server Side rendering is off.
+
+Now let's install Storbook
+
+```bash
+$ npx storybook@latest init
+```
+Storybook will ask if you want to use [Compodoc](https://compodoc.app/) for documentation. Answer `Yes`.
+
+Storybook will launch itself in the browser if everything installed correctly. Play around with it a bit, and in the next chapter we'll test the button events.
