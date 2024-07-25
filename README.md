@@ -5,3 +5,4 @@ Each branch of this git repository holds the state of the code base after the in
 
 ## Table of Contents
 1. [Setup](https://github.com/michael-lloyd-morris/storybook-angular-reactive-forms/tree/ch1-setup)
+2. [Event Testing](https://github.com/michael-lloyd-morris/storybook-angular-reactive-forms/tree/ch2-event-testing)
