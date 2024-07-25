@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/angular';
-import { fn } from '@storybook/test';
+import { fn, userEvent, expect } from '@storybook/test';
 import { ButtonComponent } from './button.component';
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories
@@ -13,7 +13,7 @@ const meta: Meta<ButtonComponent> = {
     },
   },
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#action-args
-  args: { onClick: fn() },
+  args: { clickCount: fn() },
 };
 
 export default meta;
@@ -25,6 +25,16 @@ export const Primary: Story = {
     primary: true,
     label: 'Button',
   },
+  play: async ({canvasElement,args}) => {
+    const button = canvasElement.querySelector('button') as HTMLButtonElement
+
+    await userEvent.click(button)
+    expect(args.clickCount).toHaveBeenCalledWith(1)
+    await userEvent.click(button)
+    expect(args.clickCount).toHaveBeenCalledWith(2)
+    await userEvent.click(button)
+    expect(args.clickCount).toHaveBeenCalledWith(3)
+  }
 };
 
 export const Secondary: Story = {

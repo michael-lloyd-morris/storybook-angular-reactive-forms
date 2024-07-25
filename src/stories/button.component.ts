@@ -7,7 +7,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
   imports: [CommonModule],
   template: ` <button
     type="button"
-    (click)="onClick.emit($event)"
+    (click)="onClick()"
     [ngClass]="classes"
     [ngStyle]="{ 'background-color': backgroundColor }"
   >
@@ -16,6 +16,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
   styleUrls: ['./button.css'],
 })
 export class ButtonComponent {
+  #count:number = 0
   /**
    * Is this the principal call to action on the page?
    */
@@ -43,14 +44,19 @@ export class ButtonComponent {
   label = 'Button';
 
   /**
-   * Optional click handler
+   * Click count event
    */
-  @Output()
-  onClick = new EventEmitter<Event>();
+  @Output() 
+  clickCount = new EventEmitter<number>
 
   public get classes(): string[] {
     const mode = this.primary ? 'storybook-button--primary' : 'storybook-button--secondary';
 
     return ['storybook-button', `storybook-button--${this.size}`, mode];
+  }
+
+  onClick() {
+    this.#count++
+    this.clickCount.emit(this.#count)
   }
 }
