@@ -3,3 +3,5 @@
 
 Each branch of this git repository holds the state of the code base after the instructions described in the README file of that branch have been completed.
 
+## Table of Contents
+1. [Setup](https://github.com/michael-lloyd-morris/storybook-angular-reactive-forms/tree/ch1-setup)
