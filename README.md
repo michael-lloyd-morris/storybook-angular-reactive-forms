@@ -1,4 +1,4 @@
-# Chapter Three: Reactive Form Components
+# Chapter Three: A Simple Reactive Form Component
 
 Creating a Reactive form component is not as straight-forward as creating a template and binding a component. The Reactive forms module talks to the various HTML input elements through the NG_VALUE_ACCESSOR interface, so let's start by creating an abstract component that implements that implements this interface. We'll then build an input implementation and a select implementation.
 
