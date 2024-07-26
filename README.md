@@ -1,108 +1,189 @@
-# Chapter Two: Event Testing
+# Chapter Three: Reactive Form Components
 
-Angular is heavily dependent on the passage of events between components to relay information. The original way this was done was with the Event Emitter and that's where this tutorial will begin.
+Creating a Reactive form component is not as straight-forward as creating a template and binding a component. The Reactive forms module talks to the various HTML input elements through the NG_VALUE_ACCESSOR interface, so let's start by creating an abstract component that implements that implements this interface. We'll then build an input implementation and a select implementation.
 
-Storybook will have created a folder in your default angular project at the path `<project-root>/src/app/stories`. In there you will find a `button.component.ts` and `button.stories.ts` file.
+## Abstract Component
+Open file `/src/stories/abstract.field.component` and take a look around. The five inputs will be used repeatedly by our input components, so we go ahead and define them here so they'll be inherited by those components. 
 
-## The Component
-The button doesn't do that much. It is reliant on another component to give it a click event to call when it is clicked. A more common pattern is for a component to do something when an event happens and then it will need to report the result of that operation.  So we're going to modify the Storybook example button to keep a running count of how many times it has been clicked. Whatever component hosts this new button will then receive this value when the button is clicked.
+If you are following along you may get some typescript errors on the inputs and the control element - to get rid of this you must add `"strictPropertyInitialization": false,` to the compilerOptions directive of the tsconfig.json file.
 
-The first thing we'll need to do is remove the bind for onClick from the template. Near the top of the file you'll see this code:
+The general flow that our components will take is that they will take a formControlName argument the same as the native reactive components do. In order to make use of this they have to receive the ControlContainer service, and we'll have to mock this service in our storybook tests.
+
+> **Note:** Observant readers of the code will spot that it has the @Directive decorator, not a @Component. This might seem odd but the reason is there is no template, indeed no decoration at all for this object on its own. For it to be handled by the Angular system we need some decoration. Components are just Directives with a template, so marking this as a Directive is appropriate.
+
+## Input Component
+Now let's build the Input component at `input.component.ts` Most of our work will be in the @Component declaration.
 
 ```typescript
 @Component({
-  selector: 'storybook-button',
+  selector: 'storybook-input',
   standalone: true,
-  imports: [CommonModule],
-  template: ` <button
-    type="button"
-    (click)="onClick.emit($event)"
-    [ngClass]="classes"
+  imports: [ReactiveFormsModule],
+  providers: [{
+    provide: NG_VALUE_ACCESSOR,
+    useExisting: forwardRef(() => InputFieldComponent),
+    multi: true,
+  }],
+  styleUrl: './input.component.css',
+  template: `
+  <label [for]="id + '-input'">{{label}}</label>
+  <input 
+    [id]="id + '-input'" 
+    type={{type}}
+    placeholder={{placeholder}}
+    [formControl]="control"
+    [attr.required] = "required ? 'required':null" 
+  >
+  `
+})
 ```
 
-Change the line to `(click)="onClick()"` because we want to do an operation and then emit a different eventEmitter from the internal onClick event.
-
-Now find the Component's Class declaration and add a count variable
+We're going to use a standalone module format as those are easier to manage than traditional components and it makes for a simpler tutorial. We import the ReactiveFormsModule and then we declare our NG_VALUE_ACCESSOR that will allow the Reactive Forms to talk this component.
 
 ```typescript
-export class ButtonComponent {
-  #count:number = 0
-```
-
-We use the JavaScript privacy operator instead of TypeScript's because JavaScript will enforce its privacy operator once the code is transpiled.
-
-Now find the existing click handler, which is bound to an output.
-
-```typescript
+export class InputFieldComponent extends AbstractField {
   /**
-   * Optional click handler
+   * Placeholder that goes in the text field until populated.
    */
-  @Output()
-  onClick = new EventEmitter<Event>();
-```
-
-Replace it with this one.
-
-```typescript
+  @Input() placeholder:string
   /**
-   * Click count event
+   * Field Type. Supported values are "text", "date", "email"
    */
-  @Output() 
-  clickCount:EventEmitter<number> = new EventEmitter<number>()
+  @Input() type:string = "text"
+}
 ```
 
-Now we add a click event that isn't output to increment the count and dispatch the event with the count information.
+Very little is happening here - the abstract is doing the majority of the lifting. If following along in your own branch copy the css and html over now. The template html branches between Reactive Form and the older two-way binding technique.
 
-```typescript
-  onClick() {
-    this.#count++
-    this.clickCount.emit(this.#count)
-  }
-```
 
 ## The Story
-Now we'll add the test to the story. First we need to change the binding point of the spy.  Find this code.
+For those following along rather than activating the code in this branch let's stand up a minimum story to see if everything has been entered correctly so far. That file in full is this.
 
 ```typescript
-const meta: Meta<ButtonComponent> = {
-  title: 'Example/Button',
-  component: ButtonComponent,
+import { Meta, StoryObj, componentWrapperDecorator, moduleMetadata } from '@storybook/angular';
+import { InputFieldComponent } from './input.component';
+
+const meta:Meta<InputFieldComponent> = {
+  title: 'Example/Input',
+  component: InputFieldComponent,
   tags: ['autodocs'],
-  argTypes: {
-    backgroundColor: {
-      control: 'color',
-    },
-  },
-  // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#action-args
-  args: { onClick: fn() },
-};
+  args: {},
+}
+
+export default meta
+
+type Story = StoryObj<InputFieldComponent>
+
+export const Basic: Story = {
+  args: {
+    id: 'basic-field',
+    label: 'Text Field',
+    formControlName: 'basic'
+  }
+}
 ```
 
-Change the args line to `args: { clickCount: fn() },`.
+Fire this story up and you'll be greeted with the following.
 
-Now we'll add a play test to the Primary story like so:
+> R3InjectorError(Standalone[StorybookWrapperComponent])[ControlContainer -> ControlContainer -> ControlContainer]:
+> The component failed to render properly, likely due to a configuration issue in Storybook. Here are some common causes and how you can address them:
+
+We can temporarily be rid of this with the Optional() notation. Open the Abstract Field and find the constructor:
 
 ```typescript
-export const Primary: Story = {
-  args: {
-    primary: true,
-    label: 'Button',
-  },
-  play: async ({canvasElement,args}) => {
-    const button = canvasElement.querySelector('button') as HTMLButtonElement
-
-    await userEvent.click(button)
-    expect(args.clickCount).toHaveBeenCalledWith(1)
-    await userEvent.click(button)
-    expect(args.clickCount).toHaveBeenCalledWith(2)
-    await userEvent.click(button)
-    expect(args.clickCount).toHaveBeenCalledWith(3)
-  }
-};
+  constructor(private controlContainer: ControlContainer) {}
 ```
 
-Save this and you'll see the results of this test in the Interaction tab.
+Change it to this
 
-We can transmit more than numbers. Whole complex objects and form instances can also be emitted. These events can occur on any interaction, not just click.
+```typescript
+  constructor(@Optional() private controlContainer: ControlContainer) {}
+```
 
-In the next chapter we'll begin the real journey, creating Reactive Form components.
+Of course, this technique doesn't really solve anything - it just puts the component in an untestable state.  Still, we can check to make sure the component is standing up and if it is, we're ready to a mock the provider.
+
+So after removing the @Optional() notation, open the stories file and after the imports add this code:
+
+```typescript
+let container:FormGroup
+
+@Injectable()
+class MockContainer {
+
+  public control:FormGroup
+
+  constructor(private fb:FormBuilder) {
+    this.control = this.fb.group({
+      basic: ['Hello World'],
+    })
+    container = this.control
+  }
+}
+```
+
+What we are doing is setting up a container variable that the tests can reference later to check. Meanwhile, in the constructor we create a Reactive Form in the same manner we would create it in the component that would hosts the input UI component we are building.
+
+Next, in the meta section add the decorators:
+
+```typescript
+  decorators: [
+    moduleMetadata({
+      providers: [{
+        provide: ControlContainer,
+        useClass: MockContainer
+      }] 
+    }),
+  ]
+```
+
+At this point the component should stand up and load the value off the Reactive Form.  Now we add our first test.
+
+```typescript
+  play: async ({canvasElement}) => {
+    /*
+     * Set up a canvas accessor that can fetch the input
+     * by its label to test accessibility.
+     */
+    const canvas = within(canvasElement)
+    /*
+     * Now get a reference to the Reactive Form. The values
+     * in our input component should match this.
+     */
+    const control = container.get('basic')
+    /*
+     * Now get the input
+     */
+    const input = canvas.getByLabelText('Text Field') as HTMLInputElement
+
+    // These should match
+    expect(input.value).toBe('Hello World')
+    expect(control!.value).toBe('Hello World')  
+
+    // These CSS classes should be set by Angular so we can style
+    // the element according to its current state.
+    expect(input.classList.contains('ng-invalid')).toBe(false)
+    expect(input.classList.contains('ng-valid')).toBe(true)
+    expect(input.classList.contains('ng-pristine')).toBe(true)
+    expect(input.classList.contains('ng-dirty')).toBe(false)
+
+    // And the control should be valid.
+    expect(control!.valid).toBe(true)
+
+    // Check if all the changes associated with a clear event
+    // actually take effect.
+    await userEvent.clear(input)
+    await waitFor(() => expect(input.value).toBe(''))
+    expect(control!.value).toBe('')  
+    expect(input.classList.contains('ng-invalid')).toBe(false)
+    expect(input.classList.contains('ng-valid')).toBe(true)
+    expect(input.classList.contains('ng-pristine')).toBe(false)
+    expect(input.classList.contains('ng-dirty')).toBe(true)
+
+    // Now type in a new value and see if it updates as expected.
+    await userEvent.type(input, 'Goodbye')
+    await waitFor(() => expect(input.value).toBe('Goodbye'))
+    expect(control!.value).toBe('Goodbye')
+  }
+```
+
+In the next chapter we will expand on this by creating an error component to manage the validation error messages of this and other fields.
